@@ -1,0 +1,16 @@
+# MkDocs 核心
+mkdocs>=1.5.0
+
+# Material 主题（美观的现代化主题）
+mkdocs-material>=9.5.0
+
+# 插件
+mkdocs-minify-plugin>=0.7.0
+mkdocs-git-revision-date-localized-plugin>=1.2.0
+mkdocstrings>=0.24.0
+mkdocstrings-python>=1.7.0
+
+# 可选：额外功能
+mkdocs-redirects>=1.2.1
+mkdocs-awesome-pages-plugin>=2.9.0
+mkdocs-git-authors-plugin>=0.8.0
