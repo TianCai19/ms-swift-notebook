@@ -8,6 +8,9 @@ repo_name: ms-swift-notebook
 repo_url: https://github.com/yourusername/ms-swift-notebook
 edit_uri: edit/main/
 
+# 文档目录
+docs_dir: docs
+
 # 主题配置
 theme:
   name: material
