@@ -122,33 +122,79 @@ swift sft \
 - Python 本地连通性测试示例见：`notes/30-SwanLab集成.md`
 
 ### 7. 推理与导出
-1) 推理（增量权重）
+
+#### 7.1 推理测试（2025-08-20 完成）
+
+**测试环境**：
+- GPU: NVIDIA H100 (卡号 6)
+- 模型: Qwen/Qwen2.5-7B-Instruct + LoRA checkpoint-508
+- 检查点路径: `./output/mh-sft/v0-20250820-144506/checkpoint-508`
+
+**推理方式对比**：
+
+1) **PyTorch 后端（启动最快）**
 ```bash
-CKPT=output/mh-sft-7b-lora/checkpoint-xxxx
-CUDA_VISIBLE_DEVICES=6 swift infer \
-  --adapters "$CKPT" \
+CUDA_VISIBLE_DEVICES=6 \
+swift infer \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --adapters ./output/mh-sft/v0-20250820-144506/checkpoint-508 \
+  --infer_backend pt \
+  --attn_impl flash_attn \
   --stream true \
-  --temperature 0.7 \
   --max_new_tokens 512
 ```
 
-2) 合并 LoRA 与 vLLM 推理
+2) **SGLang 后端（并发性能好）**
 ```bash
-CUDA_VISIBLE_DEVICES=6 swift infer \
-  --adapters "$CKPT" \
-  --merge_lora true \
-  --infer_backend vllm \
-  --max_new_tokens 512
+CUDA_VISIBLE_DEVICES=6 \
+swift deploy \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --adapters ./output/mh-sft/v0-20250820-144506/checkpoint-508 \
+  --infer_backend sglang \
+  --served_model_name mh-sft-7b
 ```
 
-3) 导出并回传 ModelScope
+3) **LMDeploy 后端（推荐，启动快+性能好）**
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift deploy \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --adapters ./output/mh-sft/v0-20250820-144506/checkpoint-508 \
+  --infer_backend lmdeploy \
+  --served_model_name mh-sft-7b \
+  --tp 1 \
+  --cache-max-entry-count 0 \
+  --session-len 4096
+```
+
+**推理测试结果**：
+- ✅ 所有后端均成功加载 LoRA 权重
+- ✅ 中文输入输出正常（locale 已修复）
+- ✅ Flash Attention 正常工作
+- ✅ 推理质量符合预期
+
+#### 7.2 模型导出
+
+1) **合并 LoRA 权重**
 ```bash
 swift export \
-  --adapters "$CKPT" \
-  --push_to_hub true \
-  --hub_model_id "CodyWhy/mh-sft-qwen2.5-7b" \
-  --hub_token "${MODELSCOPE_API_TOKEN}" \
-  --use_hf false
+  --ckpt_dir ./output/mh-sft/v0-20250820-144506/checkpoint-508 \
+  --merge_lora true \
+  --merge_dtype float16 \
+  --output_dir ./export/qwen-sft-7b
+```
+
+2) **上传到 ModelScope**
+```bash
+swift upload \
+  --model_dir ./export/qwen-sft-7b \
+  --hub modelscope \
+  --model_id yourname/qwen-sft-7b
+```
+
+3) **上传到 HuggingFace**
+```bash
+huggingface-cli upload ./export/qwen-sft-7b yourname/qwen-sft-7b
 ```
 
 ### 8. 已知问题与修复

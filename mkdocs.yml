@@ -48,6 +48,8 @@ nav:
     - 数据与SFT训练: notes/20-数据与SFT训练.md
     - Flash Attention 安装: notes/50-FlashAttention安装.md
     - SwanLab 集成: notes/30-SwanLab集成.md
+  - 推理测试:
+    - 推理测试与问题解决: notes/60-推理测试与问题解决.md
   - 实验报告:
     - mh-sharegpt SFT: notes/40-实验报告-mh-sharegpt-sft.md
   - 配置参考:
