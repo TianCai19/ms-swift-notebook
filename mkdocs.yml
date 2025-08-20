@@ -75,7 +75,7 @@ extra:
 # 版权信息
 copyright: Copyright &copy; 2025 Your Name
 
-# 分析工具（可选）
-extra_analytics:
-  provider: google
-  property: !GOSITE_ID
+# Google Analytics（可选，需要时取消注释并填入真实 ID）
+# extra_analytics:
+#   provider: google
+#   property: G-XXXXXXXXXX
