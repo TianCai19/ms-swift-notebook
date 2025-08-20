@@ -50,6 +50,10 @@ nav:
     - SwanLab 集成: notes/30-SwanLab集成.md
   - 推理测试:
     - 推理测试与问题解决: notes/60-推理测试与问题解决.md
+  - 模型评测:
+    - 模型评测与心理学基准: notes/70-模型评测与心理学基准.md
+  - 问题解决:
+    - 网络代理问题解决: notes/80-网络代理问题解决.md
   - 实验报告:
     - mh-sharegpt SFT: notes/40-实验报告-mh-sharegpt-sft.md
   - 配置参考:
