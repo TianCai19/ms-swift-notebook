@@ -1,0 +1,60 @@
+# 基础训练配置文件
+# 用于多模型对比实验的统一配置
+
+# 数据集配置
+dataset:
+  id: "CodyWhy/mh-sharegpt-20250820"
+  max_length: 3072
+  packing: true
+
+# 训练参数
+training:
+  train_type: "lora"
+  num_train_epochs: 1
+  learning_rate: 2e-4
+  warmup_ratio: 0.1
+  save_steps: 200
+  save_total_limit: 3
+  logging_steps: 20
+  
+# 批次配置
+batch:
+  per_device_train_batch_size: 8
+  gradient_accumulation_steps: 4
+  
+# 优化配置
+optimization:
+  bf16: true
+  gradient_checkpointing: true
+  attn_impl: "flash_attn"
+  
+# LoRA 配置
+lora:
+  rank: 8
+  alpha: 32
+  dropout: 0.1
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+# 监控配置
+monitoring:
+  report_to: "swanlab"
+  swanlab_project: "multi-model-psychology"
+  swanlab_mode: "cloud"
+
+# 输出配置
+output:
+  output_dir: "./output/{model_name}-sft"
+  max_shard_size: "2GB"
+  safe_serialization: true
+
+# 环境配置
+environment:
+  cuda_device: 6
+  no_proxy: "127.0.0.1,localhost,::1"
