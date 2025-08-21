@@ -1,0 +1,321 @@
+# 多模型对比实验（手动执行指南）
+
+本指南提供逐步命令，无任何脚本包装，便于逐步调试与复现。覆盖训练、导出、部署、评测（EvalScope）与 Human Judge。
+
+## 0. 先决条件
+
+- 硬件：单张 NVIDIA H100 80GB（或等效显存环境）
+- 软件：Python 3.10+，已安装以下依赖
+```bash
+pip install 'ms-swift[all]' evalscope 'evalscope[app]' gradio pandas requests
+```
+- 代理设置（避免本地服务被代理拦截）：
+```bash
+export NO_PROXY=127.0.0.1,localhost,::1
+export no_proxy=$NO_PROXY
+```
+- 可选：SwanLab，用于训练过程可视化（令牌建议放 `.env` 并 source）
+```bash
+export SWANLAB_TOKEN=<YOUR_SWANLAB_TOKEN>
+export SWANLAB_PROJECT=multi-model-psychology
+```
+- 数据集：`CodyWhy/mh-sharegpt-20250820`
+
+## 1. 模型清单与统一约定
+
+- 候选模型（均适合单 H100 微调）：
+  - Qwen/Qwen2.5-7B-Instruct（模板 `qwen2_5`）
+  - meta-llama/Meta-Llama-3.1-8B-Instruct（模板 `llama3`）
+  - THUDM/chatglm3-6b（模板 `chatglm3`）
+  - internlm/internlm2-chat-7b（模板 `internlm2`）
+  - baichuan-inc/Baichuan2-7B-Chat（模板 `baichuan2`）
+- GPU：固定为 6 号卡（如需更换自行调整 `CUDA_VISIBLE_DEVICES`）
+- 训练输出目录：`./output/<short-name>-sft`
+- 导出目录：`./export/<short-name>-sft`
+- 统一训练配置（除非特别说明）：
+  - LoRA 微调，bf16，`--packing true`（需 flash_attn），`--max_length 3072`
+  - batch_size=8，grad_acc=4（8B 模型建议 batch=6，grad_acc=6）
+  - lr=2e-4，epochs=1，warmup=0.1
+
+## 2. 训练（逐模型）
+
+通用参数（按模板替换）：
+- `--model <BASE_MODEL_ID>`
+- `--model_type <MODEL_TYPE>`
+- `--template <TEMPLATE>`
+
+### 2.1 Qwen2.5-7B-Instruct（推荐基线）
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model Qwen/Qwen2.5-7B-Instruct \
+  --model_type qwen2_5 \
+  --template qwen2_5 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 8 \
+  --gradient_accumulation_steps 4 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/qwen2.5-7b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name qwen2p5-7b-sft \
+  --attn_impl flash_attn
+```
+
+### 2.2 Llama3.1-8B-Instruct
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model meta-llama/Meta-Llama-3.1-8B-Instruct \
+  --model_type llama \
+  --template llama3 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 6 \
+  --gradient_accumulation_steps 6 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/llama3.1-8b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name llama3.1-8b-sft \
+  --attn_impl flash_attn
+```
+
+### 2.3 ChatGLM3-6B
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model THUDM/chatglm3-6b \
+  --model_type chatglm3 \
+  --template chatglm3 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 8 \
+  --gradient_accumulation_steps 4 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/chatglm3-6b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name chatglm3-6b-sft \
+  --attn_impl flash_attn
+```
+
+### 2.4 InternLM2-7B-Chat
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model internlm/internlm2-chat-7b \
+  --model_type internlm2 \
+  --template internlm2 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 8 \
+  --gradient_accumulation_steps 4 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/internlm2-7b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name internlm2-7b-sft \
+  --attn_impl flash_attn
+```
+
+### 2.5 Baichuan2-7B-Chat
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model baichuan-inc/Baichuan2-7B-Chat \
+  --model_type baichuan2 \
+  --template baichuan2 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 8 \
+  --gradient_accumulation_steps 4 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/baichuan2-7b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name baichuan2-7b-sft \
+  --attn_impl flash_attn
+```
+
+## 3. 导出（合并 LoRA）
+
+找到最新 checkpoint：
+```bash
+ls -d ./output/<short-name>-sft/checkpoint-* | sort -V | tail -1
+```
+
+执行导出：
+```bash
+swift export \
+  --ckpt_dir <LATEST_CHECKPOINT_DIR> \
+  --merge_lora true \
+  --safe_serialization true \
+  --max_shard_size 2GB \
+  --output_dir ./export/<short-name-merged>
+```
+
+示例（Qwen）：
+```bash
+swift export \
+  --ckpt_dir $(ls -d ./output/qwen2.5-7b-sft/checkpoint-* | sort -V | tail -1) \
+  --merge_lora true \
+  --safe_serialization true \
+  --max_shard_size 2GB \
+  --output_dir ./export/qwen2.5-7b-sft
+```
+
+## 4. 部署服务（用于 EvalScope 与 Human Judge）
+
+推荐 LMDeploy 后端（启动快，性能优）：
+
+- 方式 A（基座 + 适配器）：
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift deploy \
+  --model <BASE_MODEL_ID> \
+  --adapters <LATEST_CHECKPOINT_DIR> \
+  --infer_backend lmdeploy \
+  --served_model_name <short-name>-sft \
+  --tp 1 \
+  --cache-max-entry-count 0 \
+  --session-len 4096
+```
+
+- 方式 B（已合并导出的权重）：
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift deploy \
+  --model_dir ./export/<short-name-merged> \
+  --infer_backend lmdeploy \
+  --served_model_name <short-name>-sft \
+  --tp 1 \
+  --cache-max-entry-count 0 \
+  --session-len 4096
+```
+
+健康检查：
+```bash
+curl --noproxy '*' http://127.0.0.1:8000/v1/models
+```
+
+## 5. 评测（EvalScope）
+
+仅在服务连通正常后执行：
+```bash
+# 示例：评测 ceval 与 cmmlu，各取前 100 条
+export NO_PROXY=127.0.0.1,localhost,::1
+export no_proxy=$NO_PROXY
+
+evalscope eval \
+  --model <short-name>-sft \
+  --api-url http://127.0.0.1:8000/v1 \
+  --api-key EMPTY \
+  --eval-type service \
+  --datasets ceval cmmlu \
+  --limit 100 \
+  --output-file ./results_<short-name>.json
+```
+
+如需心理学任务（示例）：
+```bash
+# 以 PCEB/PSYQA 为例（需确认已支持的数据集标识）
+evalscope eval \
+  --model <short-name>-sft \
+  --api-url http://127.0.0.1:8000/v1 \
+  --api-key EMPTY \
+  --eval-type service \
+  --datasets pceb_mcq psyqa \
+  --limit 100 \
+  --output-file ./results_psy_<short-name>.json
+```
+
+可视化：
+```bash
+pip install 'evalscope[app]'
+evalscope app --lang zh
+```
+
+## 6. Human Judge（人工评判）
+
+启动 Web 界面（Gradio）：
+```bash
+python experiments/multi-model-comparison/scripts/human_judge_test.py
+```
+- 默认地址：`http://127.0.0.1:7860`
+- 可在“模型测试”页切换模型名（需与 `--served_model_name` 一致，例如 `qwen2.5-7b-sft`）
+- 评分维度：专业性、同理心、实用性、安全性、整体质量（1-5 分 Likert）
+- 支持主观评价与信心度
+
+## 7. 调试建议
+
+- 服务连通性：
+```bash
+curl --noproxy '*' http://127.0.0.1:8000/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"<short-name>-sft","messages":[{"role":"user","content":"你好"}]}'
+```
+- 代理拦截：确认 `NO_PROXY` 配置；必要时在 curl 中加 `--noproxy '*'`
+- 显存不足：降低 `per_device_train_batch_size`，提高 `gradient_accumulation_steps`
+- Flash Attention：保证 `flash_attn` 安装正确（与 PyTorch/CUDA 版本匹配）
+- 模板不一致：确保 `--template` 与基座模型适配
+
+---
+
+如需扩展更多模型或基准，请在本文件新增对应小节与命令块，保持“单步可执行、可观测、可复现”的原则。
