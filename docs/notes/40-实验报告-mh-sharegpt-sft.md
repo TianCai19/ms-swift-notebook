@@ -298,7 +298,42 @@ pip install evalscope
 pip install 'evalscope[app]'
 ```
 
-**使用导出模型进行评测**：
+#### 方案 C：EvalScope 简洁评测（推荐）
+
+**使用导出模型进行评测**（无需启动服务）：
+
+```bash
+# 1. 基础评测（最简洁）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets ceval \
+  --limit 100
+
+# 2. 多数据集评测
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets gsm8k arc \
+  --limit 5
+
+# 3. 带 SwanLab 的评测
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets ceval \
+  --limit 100 \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-eval
+```
+
+**优势**：
+- ✅ 无需启动服务，直接加载模型
+- ✅ 命令简洁，参数最少
+- ✅ 评测速度快，资源占用少
+- ✅ 支持多种数据集组合
+
+**使用导出模型进行评测**（修正版）：
 
 由于我们已经导出了完整的模型权重，可以直接使用 EvalScope 进行评测，无需启动服务：
 
@@ -306,7 +341,7 @@ pip install 'evalscope[app]'
 # 1. 直接评测导出模型（推荐）
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets ceval cmmlu \
   --limit 100 \
   --output-file ./results/mh-sft-7b-ceval-cmmlu.json
@@ -314,7 +349,7 @@ evalscope eval \
 # 2. 评测心理学基准（如果支持）
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets pceb_mcq psyqa \
   --limit 100 \
   --output-file ./results/mh-sft-7b-psychology.json
@@ -322,7 +357,7 @@ evalscope eval \
 # 3. 评测多个数据集
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets ceval cmmlu pceb_mcq psyqa \
   --limit 100 \
   --output-file ./results/mh-sft-7b-all-benchmarks.json
@@ -418,6 +453,27 @@ evalscope app --lang en
 - **PCEB/CPsyExam**：知识/伦理/案例综合评测
 - **PsyQA**：同理心、支持性回答质量
 - **C-Eval/CMMLU**：心理学子集知识测试
+
+**简洁评测方法**：
+```bash
+# 快速测试（5个样本）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets ceval \
+  --limit 5
+
+# 标准评测（100个样本）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets ceval \
+  --limit 100
+
+# 多数据集评测
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --datasets ceval cmmlu gsm8k arc \
+  --limit 50
+```
 
 **数据格式**：
 ```json
@@ -717,7 +773,7 @@ mkdir -p ./results/evalscope
 echo "🚀 开始评测 C-Eval..."
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets ceval \
   --limit 500 \
   --output-file ./results/evalscope/mh-sft-7b-ceval-500.json \
@@ -731,7 +787,7 @@ evalscope eval \
 echo "🚀 开始评测 CMMLU..."
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets cmmlu \
   --limit 500 \
   --output-file ./results/evalscope/mh-sft-7b-cmmlu-500.json \
@@ -745,7 +801,7 @@ evalscope eval \
 echo "🚀 开始评测心理学基准..."
 evalscope eval \
   --model ./export/mh-sft-qwen2p5-7b \
-  --eval-type local \
+  --eval-type checkpoint \
   --datasets pceb_mcq psyqa \
   --limit 200 \
   --output-file ./results/evalscope/mh-sft-7b-psychology-200.json \
