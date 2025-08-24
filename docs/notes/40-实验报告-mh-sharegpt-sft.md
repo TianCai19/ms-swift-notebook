@@ -178,9 +178,10 @@ swift deploy \
 1) **合并 LoRA 权重**
 ```bash
 swift export \
-  --ckpt_dir ./output/mh-sft/v0-20250820-144506/checkpoint-508 \
+  --ckpt_dir ./output/qwen2.5-7b-sft/v0-20250824-022332/checkpoint-43 \
   --merge_lora true \
-  --merge_dtype float16 \
+  --safe_serialization true \
+  --max_shard_size 2GB \
   --output_dir ./export/qwen-sft-7b
 ```
 
