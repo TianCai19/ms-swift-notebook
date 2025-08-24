@@ -24,7 +24,7 @@ export no_proxy=$NO_PROXY
 declare -a models=(
     "qwen2.5-7b:Qwen/Qwen2.5-7B-Instruct:qwen2_5:qwen2_5"
     "llama3.1-8b:meta-llama/Meta-Llama-3.1-8B-Instruct:llama:llama3"
-    "chatglm3-6b:THUDM/chatglm3-6b:chatglm3:chatglm3"
+    "chatglm3-6b:ZhipuAI/chatglm3-6b:chatglm3:chatglm3"
     "internlm2-7b:internlm/internlm2-chat-7b:internlm2:internlm2"
     "baichuan2-7b:baichuan-inc/Baichuan2-7B-Chat:baichuan2:baichuan2"
 )
