@@ -29,12 +29,14 @@ export SWANLAB_PROJECT=multi-model-psychology
   - THUDM/chatglm3-6b（模板 `chatglm3`）
   - internlm/internlm2-chat-7b（模板 `internlm2`）
   - baichuan-inc/Baichuan2-7B-Chat（模板 `baichuan2`）
+  - openai-mirror/gpt-oss-20b（模板 `qwen2_5`，需调整批次大小）
 - GPU：固定为 6 号卡（如需更换自行调整 `CUDA_VISIBLE_DEVICES`）
 - 训练输出目录：`./output/<short-name>-sft`
 - 导出目录：`./export/<short-name>-sft`
 - 统一训练配置（除非特别说明）：
   - LoRA 微调，bf16，`--packing true`（需 flash_attn），`--max_length 3072`
   - batch_size=8，grad_acc=4（8B 模型建议 batch=6，grad_acc=6）
+  - 20B 模型建议 batch=2，grad_acc=16（显存不足时进一步降低）
   - lr=2e-4，epochs=1，warmup=0.1
 
 ## 2. 训练（逐模型）
@@ -194,6 +196,36 @@ swift sft \
   --attn_impl flash_attn
 ```
 
+### 2.6 GPT-OSS-20B
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift sft \
+  --model openai-mirror/gpt-oss-20b \
+  --model_type qwen2_5 \
+  --template qwen2_5 \
+  --train_type lora \
+  --dataset CodyWhy/mh-sharegpt-20250820 \
+  --bf16 true \
+  --max_length 3072 \
+  --packing true \
+  --gradient_checkpointing true \
+  --per_device_train_batch_size 2 \
+  --gradient_accumulation_steps 16 \
+  --learning_rate 2e-4 \
+  --num_train_epochs 1 \
+  --warmup_ratio 0.1 \
+  --save_steps 200 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
+  --output_dir ./output/gpt-oss-20b-sft \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name gpt-oss-20b-sft \
+  --attn_impl flash_attn
+```
+
 ## 3. 导出（合并 LoRA）
 
 找到最新 checkpoint：
@@ -219,6 +251,16 @@ swift export \
   --safe_serialization true \
   --max_shard_size 2GB \
   --output_dir ./export/qwen2.5-7b-sft
+```
+
+示例（GPT-OSS-20B）：
+```bash
+swift export \
+  --ckpt_dir $(ls -d ./output/gpt-oss-20b-sft/checkpoint-* | sort -V | tail -1) \
+  --merge_lora true \
+  --safe_serialization true \
+  --max_shard_size 2GB \
+  --output_dir ./export/gpt-oss-20b-sft
 ```
 
 ## 4. 部署服务（用于 EvalScope 与 Human Judge）
@@ -248,6 +290,19 @@ swift deploy \
   --tp 1 \
   --cache-max-entry-count 0 \
   --session-len 4096
+```
+
+注意：20B 模型部署时可能需要调整显存配置，如遇 OOM 可尝试：
+```bash
+CUDA_VISIBLE_DEVICES=6 \
+swift deploy \
+  --model_dir ./export/gpt-oss-20b-sft \
+  --infer_backend lmdeploy \
+  --served_model_name gpt-oss-20b-sft \
+  --tp 1 \
+  --cache-max-entry-count 0 \
+  --session-len 2048 \
+  --max_batch_size 1
 ```
 
 健康检查：
@@ -313,9 +368,32 @@ curl --noproxy '*' http://127.0.0.1:8000/v1/chat/completions \
 ```
 - 代理拦截：确认 `NO_PROXY` 配置；必要时在 curl 中加 `--noproxy '*'`
 - 显存不足：降低 `per_device_train_batch_size`，提高 `gradient_accumulation_steps`
+  - 7B 模型：batch=8, grad_acc=4
+  - 8B 模型：batch=6, grad_acc=6  
+  - 20B 模型：batch=2, grad_acc=16（必要时 batch=1, grad_acc=32）
 - Flash Attention：保证 `flash_attn` 安装正确（与 PyTorch/CUDA 版本匹配）
 - 模板不一致：确保 `--template` 与基座模型适配
+- 20B 模型部署：如遇 OOM，降低 `session-len` 和 `max_batch_size`
 
 ---
 
-如需扩展更多模型或基准，请在本文件新增对应小节与命令块，保持“单步可执行、可观测、可复现”的原则。
+如需扩展更多模型或基准，请在本文件新增对应小节与命令块，保持"单步可执行、可观测、可复现"的原则。
+
+## 8. 模型配置参考
+
+### 8.1 批次大小与梯度累积建议
+| 模型大小 | 推荐 batch_size | 推荐 grad_acc | 总批次大小 | 备注 |
+|---------|----------------|---------------|-----------|------|
+| 6-7B    | 8              | 4             | 32        | 标准配置 |
+| 8B      | 6              | 6             | 36        | 显存紧张时 |
+| 20B     | 2              | 16            | 32        | 显存不足时 batch=1, grad_acc=32 |
+
+### 8.2 模板类型对应
+| 模型 | 模板类型 | 说明 |
+|------|----------|------|
+| Qwen2.5-7B | `qwen2_5` | 标准 Qwen 格式 |
+| Llama3.1-8B | `llama3` | 标准 Llama 格式 |
+| ChatGLM3-6B | `chatglm3` | 标准 ChatGLM 格式 |
+| InternLM2-7B | `internlm2` | 标准 InternLM 格式 |
+| Baichuan2-7B | `baichuan2` | 标准 Baichuan 格式 |
+| GPT-OSS-20B | `qwen2_5` | 兼容 Qwen 格式 |
