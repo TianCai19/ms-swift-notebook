@@ -344,6 +344,13 @@ evalscope app --lang zh
 - `--limit`: 每个数据集的评测样本数量
 - `--output-file`: 评测结果保存路径
 
+**SwanLab 集成参数**：
+- `--report_to swanlab`: 启用 SwanLab 报告
+- `--swanlab_token`: SwanLab API 令牌
+- `--swanlab_project`: SwanLab 项目名称
+- `--swanlab_mode`: 运行模式（cloud/local）
+- `--swanlab_exp_name`: 实验名称（建议包含 -eval 后缀）
+
 **支持的心理学基准数据集**：
 - `ceval`: 中文语言理解评估基准
 - `cmmlu`: 中文多任务语言理解
@@ -470,6 +477,17 @@ mkdir -p ./results/evalscope
 mkdir -p ./results/analysis
 ```
 
+**设置 SwanLab 环境变量**：
+```bash
+# 设置 SwanLab 配置
+export SWANLAB_TOKEN="P2PI8lAMWL1fF90kZAoXj"
+export SWANLAB_PROJECT="multi-model-psychology"
+
+# 验证设置
+echo "SWANLAB_TOKEN: $SWANLAB_TOKEN"
+echo "SWANLAB_PROJECT: $SWANLAB_PROJECT"
+```
+
 ### 13.2 使用 EvalScope 评测导出模型
 
 #### 基础评测（推荐开始）
@@ -480,7 +498,12 @@ evalscope eval \
   --eval-type local \
   --datasets ceval \
   --limit 100 \
-  --output-file ./results/evalscope/mh-sft-7b-ceval.json
+  --output-file ./results/evalscope/mh-sft-7b-ceval.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-ceval-eval
 
 # 评测中文多任务语言理解
 evalscope eval \
@@ -488,7 +511,12 @@ evalscope eval \
   --eval-type local \
   --datasets cmmlu \
   --limit 100 \
-  --output-file ./results/evalscope/mh-sft-7b-cmmlu.json
+  --output-file ./results/evalscope/mh-sft-7b-cmmlu.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-cmmlu-eval
 ```
 
 #### 心理学专项评测
@@ -499,7 +527,12 @@ evalscope eval \
   --eval-type local \
   --datasets pceb_mcq \
   --limit 100 \
-  --output-file ./results/evalscope/mh-sft-7b-pceb.json
+  --output-file ./results/evalscope/mh-sft-7b-pceb.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-pceb-eval
 
 # 评测心理学问答质量
 evalscope eval \
@@ -507,7 +540,12 @@ evalscope eval \
   --eval-type local \
   --datasets psyqa \
   --limit 100 \
-  --output-file ./results/evalscope/mh-sft-7b-psyqa.json
+  --output-file ./results/evalscope/mh-sft-7b-psyqa.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-psyqa-eval
 ```
 
 #### 综合评测（一次性评测多个数据集）
@@ -518,7 +556,12 @@ evalscope eval \
   --eval-type local \
   --datasets ceval cmmlu pceb_mcq psyqa \
   --limit 100 \
-  --output-file ./results/evalscope/mh-sft-7b-all-benchmarks.json
+  --output-file ./results/evalscope/mh-sft-7b-all-benchmarks.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-all-benchmarks-eval
 ```
 
 ### 13.3 评测结果分析
@@ -532,6 +575,15 @@ evalscope app --lang zh
 evalscope app --lang en
 
 # 默认地址：http://127.0.0.1:7860
+```
+
+#### 查看 SwanLab 结果
+```bash
+# 在 SwanLab 中查看评测结果
+# 项目地址：https://swanlab.ai/multi-model-psychology
+
+# 或使用命令行查看
+swanlab list --project multi-model-psychology
 ```
 
 #### 结果文件分析
@@ -556,7 +608,12 @@ evalscope eval \
   --eval-type local \
   --datasets ceval \
   --limit 500 \
-  --output-file ./results/evalscope/mh-sft-7b-ceval-500.json
+  --output-file ./results/evalscope/mh-sft-7b-ceval-500.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-ceval-500-eval
 
 # 使用多进程加速
 evalscope eval \
@@ -565,7 +622,12 @@ evalscope eval \
   --datasets ceval \
   --limit 100 \
   --num_workers 4 \
-  --output-file ./results/evalscope/mh-sft-7b-ceval-fast.json
+  --output-file ./results/evalscope/mh-sft-7b-ceval-fast.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-ceval-fast-eval
 ```
 
 #### 自定义评测
@@ -577,7 +639,12 @@ evalscope eval \
   --datasets ceval \
   --limit 100 \
   --subset psychology \
-  --output-file ./results/evalscope/mh-sft-7b-ceval-psychology.json
+  --output-file ./results/evalscope/mh-sft-7b-ceval-psychology.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project multi-model-psychology \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-ceval-psychology-eval
 ```
 
 ### 13.5 评测结果记录模板
@@ -594,6 +661,11 @@ evalscope eval \
 - 基座模型 vs 微调后模型
 - 不同训练轮数的性能变化
 - 与其他同类模型的对比
+
+**SwanLab 实验链接**：
+- 训练实验：`mh-sft-qwen2p5-7b-v1`
+- 评测实验：`mh-sft-7b-ceval-eval`, `mh-sft-7b-cmmlu-eval` 等
+- 项目地址：https://swanlab.ai/multi-model-psychology
 
 ### 13.6 常见问题解决
 
@@ -627,5 +699,65 @@ evalscope list-datasets
 ---
 
 **注意**: 使用导出模型进行评测的优势是无需启动服务，直接加载模型权重，评测速度更快，资源占用更少。建议先用小样本测试，确认无问题后再进行完整评测。
+
+### 13.7 完整评测示例
+
+#### 一键评测脚本
+```bash
+#!/bin/bash
+
+# 设置环境变量
+export SWANLAB_TOKEN="P2PI8lAMWL1fF90kZAoXj"
+export SWANLAB_PROJECT="multi-model-psychology"
+
+# 创建结果目录
+mkdir -p ./results/evalscope
+
+# 评测 C-Eval
+echo "🚀 开始评测 C-Eval..."
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval \
+  --limit 500 \
+  --output-file ./results/evalscope/mh-sft-7b-ceval-500.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-ceval-500-eval
+
+# 评测 CMMLU
+echo "🚀 开始评测 CMMLU..."
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets cmmlu \
+  --limit 500 \
+  --output-file ./results/evalscope/mh-sft-7b-cmmlu-500.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-cmmlu-500-eval
+
+# 评测心理学基准
+echo "🚀 开始评测心理学基准..."
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets pceb_mcq psyqa \
+  --limit 200 \
+  --output-file ./results/evalscope/mh-sft-7b-psychology-200.json \
+  --report_to swanlab \
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name mh-sft-7b-psychology-200-eval
+
+echo "🎉 所有评测完成！"
+echo "📊 结果文件保存在: ./results/evalscope/"
+echo "🌐 SwanLab 项目: https://swanlab.ai/multi-model-psychology"
+```
 
 
