@@ -298,6 +298,58 @@ pip install evalscope
 pip install 'evalscope[app]'
 ```
 
+**使用导出模型进行评测**：
+
+由于我们已经导出了完整的模型权重，可以直接使用 EvalScope 进行评测，无需启动服务：
+
+```bash
+# 1. 直接评测导出模型（推荐）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval cmmlu \
+  --limit 100 \
+  --output-file ./results/mh-sft-7b-ceval-cmmlu.json
+
+# 2. 评测心理学基准（如果支持）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets pceb_mcq psyqa \
+  --limit 100 \
+  --output-file ./results/mh-sft-7b-psychology.json
+
+# 3. 评测多个数据集
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval cmmlu pceb_mcq psyqa \
+  --limit 100 \
+  --output-file ./results/mh-sft-7b-all-benchmarks.json
+```
+
+**评测结果可视化**：
+```bash
+# 启动 EvalScope 可视化界面
+evalscope app --lang zh
+
+# 在浏览器中打开 http://127.0.0.1:7860
+# 上传评测结果文件进行可视化分析
+```
+
+**评测参数说明**：
+- `--model`: 导出模型的本地路径
+- `--eval-type local`: 使用本地模型（而非 API 服务）
+- `--datasets`: 要评测的数据集列表
+- `--limit`: 每个数据集的评测样本数量
+- `--output-file`: 评测结果保存路径
+
+**支持的心理学基准数据集**：
+- `ceval`: 中文语言理解评估基准
+- `cmmlu`: 中文多任务语言理解
+- `pceb_mcq`: 心理学考试选择题
+- `psyqa`: 心理学问答数据集
+
 **运行评测**：
 ```bash
 # 设置环境变量后运行
@@ -394,5 +446,186 @@ evalscope app --lang en
 - 初始版本：整理本次实验的全流程并统一命令模板（含 `--report_to swanlab`）
 - 更新：加入 Flash Attention 安装状态与支持 packing 的训练命令
 - 更新：加入完整的模型评测流程和工具配置
+- 更新：加入使用导出模型进行 EvalScope 评测的完整命令和流程
+
+## 13. 导出模型评测完整流程
+
+### 13.1 评测前准备
+
+**确认导出模型路径**：
+```bash
+# 检查导出目录
+ls -la ./export/
+# 应该看到：mh-sft-qwen2p5-7b/
+
+# 检查模型文件
+ls -la ./export/mh-sft-qwen2p5-7b/
+# 应该包含：config.json, model.safetensors, tokenizer.json 等
+```
+
+**创建结果目录**：
+```bash
+mkdir -p ./results
+mkdir -p ./results/evalscope
+mkdir -p ./results/analysis
+```
+
+### 13.2 使用 EvalScope 评测导出模型
+
+#### 基础评测（推荐开始）
+```bash
+# 评测中文语言理解基准
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval \
+  --limit 100 \
+  --output-file ./results/evalscope/mh-sft-7b-ceval.json
+
+# 评测中文多任务语言理解
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets cmmlu \
+  --limit 100 \
+  --output-file ./results/evalscope/mh-sft-7b-cmmlu.json
+```
+
+#### 心理学专项评测
+```bash
+# 评测心理学考试选择题
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets pceb_mcq \
+  --limit 100 \
+  --output-file ./results/evalscope/mh-sft-7b-pceb.json
+
+# 评测心理学问答质量
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets psyqa \
+  --limit 100 \
+  --output-file ./results/evalscope/mh-sft-7b-psyqa.json
+```
+
+#### 综合评测（一次性评测多个数据集）
+```bash
+# 评测所有支持的基准
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval cmmlu pceb_mcq psyqa \
+  --limit 100 \
+  --output-file ./results/evalscope/mh-sft-7b-all-benchmarks.json
+```
+
+### 13.3 评测结果分析
+
+#### 启动可视化界面
+```bash
+# 启动中文界面
+evalscope app --lang zh
+
+# 启动英文界面
+evalscope app --lang en
+
+# 默认地址：http://127.0.0.1:7860
+```
+
+#### 结果文件分析
+```bash
+# 查看评测结果
+cat ./results/evalscope/mh-sft-7b-ceval.json | jq '.'
+
+# 提取关键指标
+cat ./results/evalscope/mh-sft-7b-ceval.json | jq '.results | keys'
+
+# 查看具体分数
+cat ./results/evalscope/mh-sft-7b-ceval.json | jq '.results.ceval.metrics'
+```
+
+### 13.4 评测参数调优
+
+#### 性能优化
+```bash
+# 增加评测样本数量（更准确的结果）
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval \
+  --limit 500 \
+  --output-file ./results/evalscope/mh-sft-7b-ceval-500.json
+
+# 使用多进程加速
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval \
+  --limit 100 \
+  --num_workers 4 \
+  --output-file ./results/evalscope/mh-sft-7b-ceval-fast.json
+```
+
+#### 自定义评测
+```bash
+# 评测特定子集
+evalscope eval \
+  --model ./export/mh-sft-qwen2p5-7b \
+  --eval-type local \
+  --datasets ceval \
+  --limit 100 \
+  --subset psychology \
+  --output-file ./results/evalscope/mh-sft-7b-ceval-psychology.json
+```
+
+### 13.5 评测结果记录模板
+
+**评测记录表**：
+| 数据集 | 样本数 | 准确率 | F1分数 | 备注 |
+|--------|--------|--------|--------|------|
+| C-Eval | 100    | -      | -      | 待评测 |
+| CMMLU  | 100    | -      | -      | 待评测 |
+| PCEB   | 100    | -      | -      | 待评测 |
+| PsyQA  | 100    | -      | -      | 待评测 |
+
+**性能对比**：
+- 基座模型 vs 微调后模型
+- 不同训练轮数的性能变化
+- 与其他同类模型的对比
+
+### 13.6 常见问题解决
+
+**评测失败排查**：
+```bash
+# 1. 检查模型路径
+ls -la ./export/mh-sft-qwen2p5-7b/
+
+# 2. 检查模型完整性
+python -c "from transformers import AutoModel, AutoTokenizer; model = AutoModel.from_pretrained('./export/mh-sft-qwen2p5-7b'); print('Model loaded successfully')"
+
+# 3. 检查 EvalScope 安装
+evalscope --version
+
+# 4. 检查可用数据集
+evalscope list-datasets
+```
+
+**显存不足**：
+```bash
+# 减少评测样本数量
+--limit 50
+
+# 使用更小的批次
+--batch_size 1
+
+# 启用梯度检查点
+--gradient_checkpointing true
+```
+
+---
+
+**注意**: 使用导出模型进行评测的优势是无需启动服务，直接加载模型权重，评测速度更快，资源占用更少。建议先用小样本测试，确认无问题后再进行完整评测。
 
 
