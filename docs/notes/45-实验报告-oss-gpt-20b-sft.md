@@ -195,6 +195,14 @@ swift deploy \
   --served_model_name gpt-oss-20b-sft
 ```
 
+```bash
+swift deploy \
+  --model output/gpt-oss-20b-sft/v1-20250824-033405/v0-20250824-033419/checkpoint-255-merged \
+  --infer_backend vllm \
+  --max_new_tokens 2048 \
+  --served_model_name gpt-oss-20b-sft
+```
+
 #### **方式 B: 部署基座 + 适配器**
 ```bash
 swift deploy \
@@ -311,6 +319,94 @@ evalscope app --lang zh
 # 上传评测结果文件进行可视化分析
 ```
 
+### 8.3 心理学专项评测
+
+#### **心理学数据集评测脚本**
+
+创建专门的心理学评测脚本 `eval_psy_mutilpy.sh`：
+
+```bash
+#!/bin/bash
+# 心理学专项评测脚本
+# 评测多个心理学相关的测试集
+
+evalscope eval \
+  --model gpt-20b \
+  --api-url http://127.0.0.1:8000/v1/chat/completions \
+  --api-key EMPTY \
+  --eval-type service \
+  --datasets mmlu mmlu_pro mmlu_redux super_gpqa \
+  --dataset-args '{
+    "mmlu": {
+      "subset_list": ["professional_psychology", "high_school_psychology"],
+      "few_shot_num": 0,
+      "few_shot_random": false,
+      "metric_list": ["AverageAccuracy"]
+    },
+    "mmlu_pro": {
+      "subset_list": ["psychology"],
+      "few_shot_num": 5,
+      "few_shot_random": false,
+      "metric_list": ["AverageAccuracy"]
+    },
+    "mmlu_redux": {
+      "subset_list": ["professional_psychology", "high_school_psychology"],
+      "few_shot_num": 0,
+      "few_shot_random": false,
+      "metric_list": ["AverageAccuracy"]
+    },
+    "super_gpqa": {
+      "subset_list": ["Psychology"],
+      "few_shot_num": 0,
+      "few_shot_random": false,
+      "metric_list": ["AverageAccuracy"]
+    }
+  }' \
+  --limit 10
+```
+
+#### **数据集说明**
+
+| 数据集 | 子集 | 评测内容 | Few-shot | 备注 |
+|--------|------|----------|----------|------|
+| **MMLU** | professional_psychology | 专业心理学知识 | 0 | 标准心理学基准 |
+| **MMLU** | high_school_psychology | 高中心理学知识 | 0 | 基础心理学概念 |
+| **MMLU-Pro** | psychology | 心理学专业测试 | 5 | 高级心理学评估 |
+| **MMLU-Redux** | professional_psychology | 专业心理学（精简版） | 0 | 优化后的专业测试 |
+| **MMLU-Redux** | high_school_psychology | 高中心理学（精简版） | 0 | 优化后的基础测试 |
+| **Super-GPQA** | Psychology | 心理学综合测试 | 0 | 跨领域心理学评估 |
+
+#### **使用方法**
+
+1. **保存脚本**：
+```bash
+# 将脚本保存到 temp 目录
+cp temp/eval_psy_mutilpy.sh ./eval_psy_mutilpy.sh
+chmod +x ./eval_psy_mutilpy.sh
+```
+
+2. **执行评测**：
+```bash
+# 确保模型服务已启动
+./eval_psy_mutilpy.sh
+```
+
+3. **结果分析**：
+```bash
+# 查看评测结果
+evalscope app --lang zh
+
+# 分析心理学专项表现
+# 重点关注专业心理学和高中心理学的准确率差异
+```
+
+#### **评测参数优化**
+
+- **`few_shot_num`**: MMLU-Pro 使用 5-shot，其他使用 0-shot
+- **`subset_list`**: 针对心理学专业领域进行筛选
+- **`metric_list`**: 使用 `AverageAccuracy` 作为主要指标
+- **`limit`**: 每个子集评测 10 个样本，快速验证效果
+
 ## 9. 实验结果
 
 ### 9.1 训练结果
@@ -331,6 +427,16 @@ evalscope app --lang zh
 | GSM8K  | 10     | [待评测] | [待评测] | 数学推理 |
 | C-Eval | 100    | [待评测] | [待评测] | 中文语言理解 |
 | CMMLU  | 100    | [待评测] | [待评测] | 中文多任务理解 |
+
+### 9.4 心理学专项评测结果
+| 数据集 | 子集 | 样本数 | 准确率 | Few-shot | 备注 |
+|--------|------|--------|--------|----------|------|
+| **MMLU** | professional_psychology | 10 | [待评测] | 0 | 专业心理学知识 |
+| **MMLU** | high_school_psychology | 10 | [待评测] | 0 | 高中心理学概念 |
+| **MMLU-Pro** | psychology | 10 | [待评测] | 5 | 高级心理学评估 |
+| **MMLU-Redux** | professional_psychology | 10 | [待评测] | 0 | 专业心理学（精简版） |
+| **MMLU-Redux** | high_school_psychology | 10 | [待评测] | 0 | 高中心理学（精简版） |
+| **Super-GPQA** | Psychology | 10 | [待评测] | 0 | 跨领域心理学评估 |
 
 ### 9.4 性能对比
 - **基座模型 vs 微调后模型**: [待对比]
@@ -378,6 +484,8 @@ evalscope app --lang zh
 - [ ] 完成模型推理测试，验证 LoRA 加载
 - [ ] 部署推理服务，进行在线评测
 - [ ] 获得具体性能数据，分析模型效果
+- [ ] 执行心理学专项评测，验证模型在心理学任务上的表现
+- [ ] 对比不同心理学数据集的评测结果，分析模型优势领域
 
 ### 12.2 中期目标
 - [ ] 尝试不同的 LoRA 配置（rank, alpha）
