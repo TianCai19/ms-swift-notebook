@@ -41,24 +41,32 @@ swift sft \
   --model Qwen/Qwen2.5-7B-Instruct \
   --train_type lora \
   --dataset CodyWhy/mh-sharegpt-20250820 \
+  --torch_dtype bfloat16 \
   --num_train_epochs 1 \
   --per_device_train_batch_size 8 \
+  --per_device_eval_batch_size 4 \
+  --router_aux_loss_coef 1e-3 \
+  --learning_rate 1e-4 \
+  --lora_rank 8 \
+  --lora_alpha 32 \
+  --target_modules all-linear \
   --gradient_accumulation_steps 4 \
-  --learning_rate 2e-4 \
-  --max_length 3072 \
-  --packing true \
-  --attn_impl flash_attn \
-  --bf16 true \
-  --gradient_checkpointing true \
-  --save_steps 200 \
+  --eval_steps 100 \
+  --save_steps 100 \
   --save_total_limit 3 \
   --logging_steps 20 \
-  --output_dir output/mh-sft-7b-lora \
+  --max_length 3072 \
+  --output_dir ./output/qwen2.5-7b-sft/v1-$(date +%Y%m%d-%H%M%S) \
+  --warmup_ratio 0.1 \
+  --dataloader_num_workers 8 \
+  --packing true \
+  --attn_impl flash_attn \
+  --gradient_checkpointing true \
   --report_to swanlab \
-  --swanlab_token ${SWANLAB_API_KEY} \
-  --swanlab_project ${SWANLAB_PROJECT:-mh-sft} \
-  --swanlab_mode ${SWANLAB_MODE:-cloud} \
-  --swanlab_exp_name mh-sft-qwen2p5-7b-lora
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name qwen2.5-7b-sft-v1
 ```
 
 #### 5.2 32B（H100 80GB，示例为 6 号卡）
@@ -68,24 +76,32 @@ swift sft \
   --model Qwen/Qwen2.5-32B-Instruct \
   --train_type lora \
   --dataset CodyWhy/mh-sharegpt-20250820 \
-  --bf16 true \
+  --torch_dtype bfloat16 \
+  --num_train_epochs 1 \
+  --per_device_train_batch_size 2 \
+  --per_device_eval_batch_size 1 \
+  --router_aux_loss_coef 1e-3 \
+  --learning_rate 1e-4 \
+  --lora_rank 16 \
+  --lora_alpha 64 \
+  --target_modules all-linear \
+  --gradient_accumulation_steps 8 \
+  --eval_steps 100 \
+  --save_steps 100 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
   --max_length 4096 \
+  --output_dir ./output/qwen2.5-32b-sft/v1-$(date +%Y%m%d-%H%M%S) \
+  --warmup_ratio 0.1 \
+  --dataloader_num_workers 8 \
   --packing true \
   --attn_impl flash_attn \
   --gradient_checkpointing true \
-  --per_device_train_batch_size 2 \
-  --gradient_accumulation_steps 8 \
-  --learning_rate 2e-4 \
-  --num_train_epochs 1 \
-  --save_steps 200 \
-  --save_total_limit 3 \
-  --logging_steps 20 \
-  --output_dir output/mh-sft-32b-lora \
   --report_to swanlab \
-  --swanlab_token ${SWANLAB_API_KEY} \
-  --swanlab_project ${SWANLAB_PROJECT:-mh-sft} \
-  --swanlab_mode ${SWANLAB_MODE:-cloud} \
-  --swanlab_exp_name mh-sft-qwen2p5-32b-lora
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name qwen2.5-32b-sft-v1
 ```
 
 #### 5.3 使用本地文件（可替代数据集 ID）
@@ -95,24 +111,87 @@ swift sft \
   --model Qwen/Qwen2.5-7B-Instruct \
   --train_type lora \
   --dataset /abs/path/to/your_sharegpt.jsonl \
+  --torch_dtype bfloat16 \
   --num_train_epochs 1 \
   --per_device_train_batch_size 8 \
+  --per_device_eval_batch_size 4 \
+  --router_aux_loss_coef 1e-3 \
+  --learning_rate 1e-4 \
+  --lora_rank 8 \
+  --lora_alpha 32 \
+  --target_modules all-linear \
   --gradient_accumulation_steps 4 \
-  --learning_rate 2e-4 \
+  --eval_steps 100 \
+  --save_steps 100 \
+  --save_total_limit 3 \
+  --logging_steps 20 \
   --max_length 3072 \
+  --output_dir ./output/qwen2.5-7b-sft-local/v1-$(date +%Y%m%d-%H%M%S) \
+  --warmup_ratio 0.1 \
+  --dataloader_num_workers 8 \
   --packing true \
   --attn_impl flash_attn \
-  --bf16 true \
   --gradient_checkpointing true \
-  --output_dir output/local-file-run \
   --report_to swanlab \
-  --swanlab_token ${SWANLAB_API_KEY} \
-  --swanlab_project ${SWANLAB_PROJECT:-mh-sharegpt} \
-  --swanlab_mode ${SWANLAB_MODE:-cloud} \
-  --swanlab_exp_name mh-sft-local-file
+  --swanlab_token $SWANLAB_TOKEN \
+  --swanlab_project $SWANLAB_PROJECT \
+  --swanlab_mode cloud \
+  --swanlab_exp_name qwen2.5-7b-sft-local-v1
 ```
 
-### 6. 监控与验证
+### 5.4 关键参数说明
+
+#### **模型配置**
+- `--model Qwen/Qwen2.5-7B-Instruct`: 7B 参数的指令调优模型
+- `--train_type lora`: 使用 LoRA 进行参数高效微调
+- `--torch_dtype bfloat16`: 使用 bfloat16 精度，节省显存
+
+#### **LoRA 配置**
+- `--lora_rank 8`: LoRA 秩，适合 7B 模型
+- `--lora_alpha 32`: LoRA 缩放因子，通常为 rank 的 4 倍
+- `--target_modules all-linear`: 目标所有线性层，更全面的微调
+
+#### **训练优化**
+- `--per_device_train_batch_size 8`: 单批次大小（7B 模型显存充足）
+- `--gradient_accumulation_steps 4`: 梯度累积步数，总批次大小 = 8 × 4 = 32
+- `--max_length 3072`: 最大序列长度，平衡效果与显存
+- `--dataloader_num_workers 8`: 数据加载器工作进程数
+
+#### **监控与保存**
+- `--eval_steps 100`: 每 100 步进行一次评估
+- `--save_steps 100`: 每 100 步保存一次检查点
+- `--save_total_limit 3`: 最多保存 3 个检查点
+- `--logging_steps 20`: 每 20 步记录一次日志
+
+#### **Flash Attention 优化**
+- `--packing true`: 启用序列打包，提高训练效率
+- `--attn_impl flash_attn`: 使用 Flash Attention 实现
+- `--gradient_checkpointing true`: 启用梯度检查点，节省显存
+
+### 6. 训练过程
+
+#### 6.1 训练监控
+```bash
+# 查看 SwanLab 实验
+# 项目地址: https://swanlab.ai/multi-model-psychology
+# 实验名称: qwen2.5-7b-sft-v1
+
+# 查看训练日志
+tail -f ./output/qwen2.5-7b-sft/v1-*/trainer_state.json
+```
+
+#### 6.2 关键指标
+- **Loss 趋势**: 训练损失下降情况
+- **Learning Rate**: 学习率变化（预热和衰减）
+- **GPU 利用率**: 显存使用和计算效率
+- **训练速度**: 每秒处理的样本数
+
+#### 6.3 预期训练时间
+- **总步数**: 约 300-500 步（取决于数据集大小）
+- **训练时间**: 约 1-2 小时（H100 GPU）
+- **显存占用**: 约 25-35GB
+
+### 7. 监控与验证
 - 必须显式加入：`--report_to swanlab`，否则不会推送任何指标
 - 运行时预期日志：
 ```text
@@ -121,7 +200,7 @@ swift sft \
 ```
 - Python 本地连通性测试示例见：`notes/30-SwanLab集成.md`
 
-### 7. 推理与导出
+### 8. 推理与导出
 
 #### 7.1 推理测试（2025-08-20 完成）
 
@@ -198,9 +277,9 @@ swift upload \
 huggingface-cli upload ./export/qwen-sft-7b yourname/qwen-sft-7b
 ```
 
-## 8. 模型评测（2025-08-20 完成）
+## 9. 模型评测（2025-08-20 完成）
 
-### 8.1 评测环境准备
+### 9.1 评测环境准备
 
 **环境变量设置**（解决代理问题）：
 ```bash
