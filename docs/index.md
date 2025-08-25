@@ -16,6 +16,7 @@
 ### 实验记录
 - [mh-sharegpt SFT 实验](notes/40-实验报告-mh-sharegpt-sft.md) - 完整的实验报告和配置
 - [OSS-GPT-20B SFT 实验](notes/45-实验报告-oss-gpt-20b-sft.md) - 20B 大模型微调实验
+- [InternLM2.5-7B SFT 实验](notes/50-实验报告-internlm2.5-7b-sft.md) - 7B 中文对话模型微调实验
 - [多模型对比实验指南](notes/66-多模型对比实验指南.md) - 多模型训练、评测和对比实验
 
 ### 推理与评测
