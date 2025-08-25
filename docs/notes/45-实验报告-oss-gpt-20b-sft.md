@@ -191,15 +191,15 @@ swift infer \
 swift deploy \
   --model output/gpt-oss-20b-sft/v1-20250824-033405/v0-20250824-033419/checkpoint-255-merged \
   --infer_backend pt \
-  --max_new_tokens 2048 \
+  --max_new_tokens 4096 \
   --served_model_name gpt-oss-20b-sft
 ```
 
 ```bash
 swift deploy \
   --model output/gpt-oss-20b-sft/v1-20250824-033405/v0-20250824-033419/checkpoint-255-merged \
-  --infer_backend vllm \
-  --max_new_tokens 2048 \
+  --infer_backend lmdeploy \
+  --max_new_tokens 4096 \
   --served_model_name gpt-oss-20b-sft
 ```
 
@@ -331,7 +331,7 @@ evalscope app --lang zh
 # 评测多个心理学相关的测试集
 
 evalscope eval \
-  --model gpt-20b \
+  --model gpt-oss-20b-sft \
   --api-url http://127.0.0.1:8000/v1/chat/completions \
   --api-key EMPTY \
   --eval-type service \
@@ -422,11 +422,20 @@ evalscope app --lang zh
 - **显存占用**: [待测试]
 
 ### 9.3 评测结果
-| 数据集 | 样本数 | 准确率 | F1分数 | 备注 |
-|--------|--------|--------|--------|------|
-| GSM8K  | 10     | [待评测] | [待评测] | 数学推理 |
-| C-Eval | 100    | [待评测] | [待评测] | 中文语言理解 |
-| CMMLU  | 100    | [待评测] | [待评测] | 中文多任务理解 |
+
+以下为使用 EvalScope（checkpoint / service 混合流程）在当前已评测心理学相关数据集上的结果汇总（AverageAccuracy）：
+
+| 模型 | 数据集 | Score | Num |
+|------|--------|-------|-----|
+| gpt-oss-20b-sft | mmlu | 0.8069 | 1155 |
+| gpt-oss-20b-sft | mmlu_pro | 0.6566 | 798 |
+| gpt-oss-20b-sft | mmlu_redux | 0.8350 | 200 |
+| gpt-oss-20b-sft | super_gpqa | 0.2069 | 87 |
+
+简要分析：
+- mmlu / mmlu_redux 在心理学方向达到 0.81–0.84 的平均准确率，表明模型具备较扎实的心理学通识能力；redux 结果与 mmlu 一致性较高。
+- mmlu_pro（psychology）为更高难度集，0.6566 显示模型具备一定的专业推理与知识迁移能力，但有进一步提升空间（few-shot/提示优化/解题链）。
+- super_gpqa（Psychology）结果偏低（0.2069），反映跨领域复杂问答情景下的推理与知识整合仍具挑战，建议结合思维链/工具使用/多步规划进行针对性增强。
 
 ### 9.4 心理学专项评测结果
 | 数据集 | 子集 | 样本数 | 准确率 | Few-shot | 备注 |
